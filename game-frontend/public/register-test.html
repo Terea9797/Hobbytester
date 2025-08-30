@@ -1,0 +1,110 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Register Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: ui-sans-serif, system-ui, Arial; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    form { display: grid; gap: .75rem; margin-top: 1rem; }
+    input, button { padding: .6rem .7rem; font-size: 1rem; }
+    .row { display: grid; gap: .25rem; }
+    .ok { color: #0a7a0a; }
+    .err { color: #b00020; white-space: pre-wrap; }
+    .hint { color: #666; font-size: .9rem; }
+    .box { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <h1>Register Test</h1>
+  <p class="hint">This posts to <code>/auth/register</code> at <code>VITE_API_BASE_URL</code> (defaults to <code>http://127.0.0.1:8000</code>).</p>
+
+  <div class="box">
+    <form id="form">
+      <div class="row">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="t@e.co" required />
+      </div>
+      <div class="row">
+        <label>Username (≥ 3 chars)</label>
+        <input id="username" type="text" placeholder="tester" minlength="3" required />
+      </div>
+      <div class="row">
+        <label>Password (≤20, ≥1 digit, ≥1 special)</label>
+        <input id="password" type="password" placeholder="A!23456" required />
+      </div>
+      <div class="row">
+        <label>Confirm password</label>
+        <input id="confirm" type="password" placeholder="A!23456" required />
+      </div>
+      <button id="btn" type="submit">Register</button>
+    </form>
+  </div>
+
+  <div id="out" style="margin-top:1rem;"></div>
+
+  <script type="module">
+    // Read Vite env at runtime if available; otherwise fallback
+    const BASE = (window.__vite_plugin_env__ && window.__vite_plugin_env__.VITE_API_BASE_URL)
+      || import.meta?.env?.VITE_API_BASE_URL
+      || "http://127.0.0.1:8000";
+
+    const form = document.getElementById("form");
+    const out = document.getElementById("out");
+    const btn = document.getElementById("btn");
+
+    function show(status, data) {
+      const ok = status >= 200 && status < 300;
+      out.innerHTML = "";
+      const pre = document.createElement("pre");
+      pre.className = ok ? "ok" : "err";
+      pre.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      out.append(pre);
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+
+      const email = document.getElementById("email").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirm").value;
+
+      // Match backend rules client-side to avoid 422
+      const passOk = /^(?=.*\d)(?=.*[^\w\s]).{1,20}$/.test(password);
+      if (!passOk) {
+        show(400, "Password must be ≤20 chars, include at least one digit and one special symbol.");
+        btn.disabled = false;
+        return;
+      }
+      if (password !== confirmPassword) {
+        show(400, "Passwords do not match.");
+        btn.disabled = false;
+        return;
+      }
+      if (username.length < 3) {
+        show(400, "Username must be at least 3 characters.");
+        btn.disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch(\\/auth/register\, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, username, password, confirmPassword })
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
+        show(res.status, data);
+      } catch (err) {
+        show(0, String(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

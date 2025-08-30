@@ -1,0 +1,40 @@
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from typing import List, Any
+import json
+
+class Settings(BaseSettings):
+    SECRET_KEY: str = "dev-secret"
+    JWT_ALG: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    DATABASE_URL: str = "sqlite+aiosqlite:///./app.db"
+
+    # Accept JSON array or CSV
+    CORS_ORIGINS: List[str] = []
+    DEBUG: bool = False
+
+    # For links we "send" in emails (console output in dev)
+    BASE_URL: str = "http://127.0.0.1:8000"
+    FRONTEND_URL: str = "http://127.0.0.1:5173"
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        s = str(v).strip()
+        if not s:
+            return []
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except json.JSONDecodeError:
+            pass
+        return [x.strip() for x in s.split(",") if x.strip()]
+
+settings = Settings()

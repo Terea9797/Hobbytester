@@ -1,0 +1,13 @@
+﻿# Python
+game-backend/.venv/
+__pycache__/
+*.pyc
+
+# Node
+game-frontend/node_modules/
+game-frontend/.vite/
+dist/
+
+# Editor/OS
+.DS_Store
+Thumbs.db
