@@ -3,7 +3,7 @@
 // //
 // // ========================== PREVIOUS api.ts (embedded) ==========================
 // // (This block was auto-inserted. Your original file is also saved as api.ts.bak)
-// const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+// const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 // 
 // export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
 //   const token = localStorage.getItem('token');
@@ -102,3 +102,4 @@ export async function api<T = any>(path: string, init?: RequestInit): Promise<T>
 
   return data as T;
 }
+import { api } from "../lib/http";

@@ -40,7 +40,7 @@ const LandingPage: React.FC<LandingProps> = ({
   title = "Your City, Your Story",
   subtitle = "Live the streets. Forge your path. Open-world browser RP.",
   heroSrc = "/assets/hero.png",
-  apiBaseUrl = (import.meta as any)?.env?.VITE_API_URL ?? "",
+  apiBaseUrl = (import.meta as any)?.env?.VITE_API_BASE_URL ?? "",
 }) => {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [busy, setBusy] = useState(false);
@@ -364,3 +364,4 @@ function PrimaryButton(
 
 
 
+import { api } from "../lib/http";
