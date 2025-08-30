@@ -22,3 +22,7 @@ export default function Layout({ bg, children }: { bg: string, children: React.R
 }
 
 
+
+
+
+

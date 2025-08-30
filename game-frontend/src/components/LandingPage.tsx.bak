@@ -1,5 +1,6 @@
-﻿import { useState, useMemo } from "react";
-import { api } from "../lib/http";
+﻿import { useState, useEffect, useMemo } from 'react';
+
+const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type Message = { kind: "success" | "error"; text: string } | null;
 
@@ -7,23 +8,39 @@ type LandingProps = {
   title?: string;
   subtitle?: string;
   heroSrc?: string;
+  apiBaseUrl?: string;
 };
 
+function joinUrl(base: string, path: string) {
+  if (!base) return path;
+  return base.endsWith("/") ? base.slice(0, -1) + path : base + path;
+}
+async function safeJson(res: Response): Promise<any | null> {
+  try {
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+// AC: at least one special symbol, at least one number, max 20 chars
 function validatePassword(pw: string) {
   const hasNumber = /\d/.test(pw);
   const hasSpecial = /[^A-Za-z0-9]/.test(pw);
-  const minLen = pw.length >= 8;           // frontend matches backend: min 8
   const withinMax = pw.length > 0 && pw.length <= 20;
-  return { hasNumber, hasSpecial, minLen, withinMax, ok: hasNumber && hasSpecial && minLen && withinMax };
+  return { hasNumber, hasSpecial, withinMax, ok: hasNumber && hasSpecial && withinMax };
 }
-
 function validateEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
 const LandingPage: React.FC<LandingProps> = ({
   title = "Your City, Your Story",
   subtitle = "Live the streets. Forge your path. Open-world browser RP.",
   heroSrc = "/assets/hero.png",
+  apiBaseUrl = (import.meta as any)?.env?.VITE_API_BASE_URL ?? "",
 }) => {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [busy, setBusy] = useState(false);
@@ -45,14 +62,22 @@ const LandingPage: React.FC<LandingProps> = ({
   const usernameOk = registerForm.username.trim().length > 0;
   const registerEnabled = pwState.ok && emailOk && confirmOk && usernameOk && !busy;
 
+  const api = (p: string) => joinUrl(apiBaseUrl || "", p);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMessage(null);
     try {
-      const data = await api<{ access_token: string }>("/auth/login", {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(loginForm),
       });
+      const data = await safeJson(res);
+      if (!res.ok) {
+        const detail = (data && (data.detail || data.message)) || `HTTP ${res.status}`;
+        throw new Error(detail);
+      }
       if (!data?.access_token) throw new Error("Missing access token from server.");
       localStorage.setItem("token", data.access_token);
       setMessage({ kind: "success", text: "Welcome back! Logging you in…" });
@@ -66,23 +91,30 @@ const LandingPage: React.FC<LandingProps> = ({
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMessage(null);
-
     if (!registerEnabled) {
       setBusy(false);
       setMessage({ kind: "error", text: "Please fix form errors before registering." });
       return;
     }
-
     try {
-      await api("/auth/register", {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: registerForm.username.trim(),
           email: registerForm.email.trim(),
           password: registerForm.password,
         }),
       });
-      setMessage({ kind: "success", text: "Account created. Check your email to confirm." });
+      const data = await safeJson(res);
+      if (!res.ok) {
+        const detail = (data && (data.detail || data.message)) || `HTTP ${res.status}`;
+        throw new Error(detail);
+      }
+      setMessage({
+        kind: "success",
+        text: "Account created. Check your email for a confirmation link/code to verify.",
+      });
       setTab("login");
       setRegisterForm({ username: "", email: "", password: "", confirm: "" });
     } catch (err: any) {
@@ -96,10 +128,16 @@ const LandingPage: React.FC<LandingProps> = ({
     e.preventDefault();
     setBusy(true); setMessage(null);
     try {
-      await api("/auth/forgot-password", {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() }),
       });
+      const data = await safeJson(res);
+      if (!res.ok) {
+        const detail = (data && (data.detail || data.message)) || `HTTP ${res.status}`;
+        throw new Error(detail);
+      }
       setMessage({
         kind: "success",
         text: "If that email exists, we sent a reset link. Check your inbox.",
@@ -141,14 +179,12 @@ const LandingPage: React.FC<LandingProps> = ({
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <button
-              type="button"
               onClick={() => setTab("register")}
               className="group rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-lg font-semibold text-white shadow-[0_10px_30px_-10px_rgba(255,90,31,0.6)] transition hover:from-orange-400 hover:to-rose-400 focus:outline-none"
             >
               Play Free — Register
             </button>
             <button
-              type="button"
               onClick={() => setTab("login")}
               className="rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-lg font-semibold text-white/90 backdrop-blur-md transition hover:bg-white/10"
             >
@@ -175,7 +211,7 @@ const LandingPage: React.FC<LandingProps> = ({
                       onChange={(e) => setLoginForm(s => ({ ...s, [e.target.name]: e.target.value }))}
                       placeholder="••••••••" autoComplete="current-password" />
                     <div className="flex items-center justify-between">
-                      <button type="button" onClick={() => setShowForgot(true)} className="text-sm text-white/70 hover:text-white">
+                      <button type="button" onClick={() => setShowForgot(v => !v)} className="text-sm text-white/70 hover:text-white">
                         Forgot password?
                       </button>
                     </div>
@@ -193,7 +229,7 @@ const LandingPage: React.FC<LandingProps> = ({
                         onChange={(e) => setForgotEmail(e.target.value)}
                         required
                       />
-                      <button type="submit"
+                      <button
                         disabled={busy}
                         className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2 font-semibold text-white hover:from-orange-400 hover:to-rose-400 disabled:opacity-60"
                       >
@@ -214,11 +250,10 @@ const LandingPage: React.FC<LandingProps> = ({
                     onChange={(e) => setRegisterForm(s => ({ ...s, [e.target.name]: e.target.value }))}
                     placeholder="Max 20 chars, incl. number & special" autoComplete="new-password" />
                   <ul className="text-xs text-white/70 space-y-1">
-  <li className={pwState.minLen ? "text-emerald-300" : ""}>• minimum 8 characters</li>
-  <li className={pwState.hasNumber ? "text-emerald-300" : ""}>• contains at least one number</li>
-  <li className={pwState.hasSpecial ? "text-emerald-300" : ""}>• contains at least one special symbol</li>
-  <li className={pwState.withinMax ? "text-emerald-300" : ""}>• max 20 characters</li>
-</ul>
+                    <li className={pwState.hasNumber ? "text-emerald-300" : ""}>• contains at least one number</li>
+                    <li className={pwState.hasSpecial ? "text-emerald-300" : ""}>• contains at least one special symbol</li>
+                    <li className={pwState.withinMax ? "text-emerald-300" : ""}>• max 20 characters</li>
+                  </ul>
                   <Field label="Confirm Password" name="confirm" type="password" value={registerForm.confirm}
                     onChange={(e) => setRegisterForm(s => ({ ...s, [e.target.name]: e.target.value }))}
                     placeholder="Re-enter your password" autoComplete="new-password" />
@@ -226,13 +261,12 @@ const LandingPage: React.FC<LandingProps> = ({
                     <div className="text-xs text-rose-300">Passwords do not match.</div>
                   )}
                   <button
-  type="submit"
-  aria-disabled={!registerEnabled || busy}
-  className={`group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-base font-semibold text-white shadow-[0_25px_60px_-25px_rgba(255,90,31,0.65)] transition hover:from-orange-400 hover:to-rose-400 ${(!registerEnabled || busy) ? "opacity-50 cursor-not-allowed" : ""}`}
-  title={!registerEnabled ? "Please fix the form errors" : (busy ? "Working..." : "")}
->
-  Create Account
-</button>
+                    disabled={!registerEnabled}
+                    type="submit"
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-base font-semibold text-white shadow-[0_25px_60px_-25px_rgba(255,90,31,0.65)] transition hover:from-orange-400 hover:to-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Create Account
+                  </button>
                   <p className="pt-1 text-xs text-white/60">
                     By creating an account, you agree to our <a href="/terms" className="underline hover:text-white">Terms</a> and <a href="/privacy" className="underline hover:text-white">Privacy Policy</a>.
                   </p>
@@ -297,11 +331,9 @@ function Field({ label, name, type = "text", value, onChange, placeholder, autoC
   );
 }
 
-function TabButton(
-  { active, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }
-) {
+function TabButton({ active, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   return (
-    <button type="button"
+    <button
       {...props}
       className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? "bg-white text-black" : "text-white/80 hover:text-white"}`}
     >
@@ -310,12 +342,13 @@ function TabButton(
   );
 }
 
+/** Primary gradient CTA used in Login form */
 function PrimaryButton(
   { children, busy, ...props }:
   React.ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }
 ) {
   return (
-    <button type="submit"
+    <button
       disabled={busy || props.disabled}
       {...props}
       className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-3 text-base font-semibold text-white shadow-[0_25px_60px_-25px_rgba(255,90,31,0.65)] transition hover:from-orange-400 hover:to-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
@@ -325,6 +358,13 @@ function PrimaryButton(
     </button>
   );
 }
+
+
+
+
+
+
+import { api } from "../lib/http";
 
 
 
