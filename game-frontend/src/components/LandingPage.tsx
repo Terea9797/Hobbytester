@@ -1,4 +1,5 @@
-﻿
+﻿import { useState, useEffect, useMemo } from 'react';
+
 const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type Message = { kind: "success" | "error"; text: string } | null;
@@ -67,7 +68,7 @@ const LandingPage: React.FC<LandingProps> = ({
     e.preventDefault();
     setBusy(true); setMessage(null);
     try {
-      const res = await fetch(api("/auth/login"), {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(loginForm),
@@ -96,7 +97,7 @@ const LandingPage: React.FC<LandingProps> = ({
       return;
     }
     try {
-      const res = await fetch(api("/auth/register"), {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -127,7 +128,7 @@ const LandingPage: React.FC<LandingProps> = ({
     e.preventDefault();
     setBusy(true); setMessage(null);
     try {
-      const res = await fetch(api("/auth/forgot-password"), {
+      const res = await fetch(api('http://127.0.0.1:8000/auth/'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() }),
@@ -357,6 +358,8 @@ function PrimaryButton(
     </button>
   );
 }
+
+
 
 
 
