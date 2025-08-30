@@ -1,13 +1,27 @@
-﻿# Python
-game-backend/.venv/
-__pycache__/
-*.pyc
-
-# Node
-game-frontend/node_modules/
-game-frontend/.vite/
+﻿# Node / Frontend
+node_modules/
 dist/
+build/
+.cache/
+.vite/
+.eslintcache
+coverage/
+*.log
 
-# Editor/OS
+# Python / Backend
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.env
+.env.*
+*.sqlite3
+
+# OS / Editor
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
