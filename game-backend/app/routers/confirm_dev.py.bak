@@ -1,0 +1,105 @@
+﻿from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
+from urllib.parse import unquote_plus
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# ---- Resolve a session dependency (get_session OR get_db) from common places ----
+get_session = None
+# try app.db
+try:
+    from app.db import get_session as _dep
+    get_session = _dep
+except Exception:
+    try:
+        from app.db import get_db as _dep
+        get_session = _dep
+    except Exception:
+        pass
+
+# try app.database
+if get_session is None:
+    try:
+        from app.database import get_session as _dep
+        get_session = _dep
+    except Exception:
+        try:
+            from app.database import get_db as _dep
+            get_session = _dep
+        except Exception:
+            pass
+
+# try app.core.db
+if get_session is None:
+    try:
+        from app.core.db import get_session as _dep
+        get_session = _dep
+    except Exception:
+        try:
+            from app.core.db import get_db as _dep
+            get_session = _dep
+        except Exception:
+            pass
+
+if get_session is None:
+    raise ImportError("Could not import get_session/get_db from app.db/app.database/app.core.db. Please tell me where your DB dependency lives (module + function).")
+
+# ---- Resolve models (EmailToken, User) from common places ----
+EmailToken = None
+User = None
+errs = []
+
+for path in [
+    ("app.models", "EmailToken", "User"),
+    ("app.models.email_token", "EmailToken", None),
+    ("app.models.user", None, "User"),
+    ("app.db.models", "EmailToken", "User"),
+]:
+    mod_name, tok_name, usr_name = path
+    try:
+        mod = __import__(mod_name, fromlist=["*"])
+        if tok_name and getattr(mod, tok_name, None):
+            EmailToken = getattr(mod, tok_name)
+        if usr_name and getattr(mod, usr_name, None):
+            User = getattr(mod, usr_name)
+        if EmailToken and User:
+            break
+    except Exception as e:
+        errs.append(f"{mod_name}: {e!r}")
+
+if not (EmailToken and User):
+    raise ImportError("Could not import EmailToken/User from known locations. Tried: " + ", ".join(errs))
+
+router = APIRouter()
+
+@router.get("/auth/confirm-email/dev")
+async def confirm_email_dev(token: str, session: AsyncSession = Depends(get_session)):
+    raw = token
+    tok = unquote_plus(token).strip().replace(" ", "+")  # normalize (+ vs space; encoded chars)
+    print("CONFIRM_DEV raw=", repr(raw), " norm=", repr(tok))
+
+    row = await session.scalar(
+        select(EmailToken).where(
+            EmailToken.purpose == "confirm",
+            EmailToken.token == tok,
+            EmailToken.expires_at > func.now(),
+        )
+    )
+    if not row:
+        return JSONResponse(status_code=400, content={"detail": "Invalid token"})
+
+    user = await session.get(User, row.user_id)
+    if not user:
+        return JSONResponse(status_code=400, content={"detail": "User missing"})
+
+    # mark verified, remove token, commit
+    # NOTE: adjust field name if your column is is_confirmed/is_verified
+    if hasattr(user, "is_verified"):
+        user.is_verified = True
+    elif hasattr(user, "is_confirmed"):
+        user.is_confirmed = True
+
+    await session.delete(row)
+    await session.commit()
+
+    return {"status": "email_confirmed", "user_id": getattr(user, "id", None)}

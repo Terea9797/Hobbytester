@@ -1,5 +1,5 @@
 ﻿import { create } from 'zustand'
-import { api } from '../lib/api'
+import { api } from "../lib/http"
 
 export type Profile = {
   display_name: string
@@ -30,6 +30,7 @@ export const useAuth = create<AuthState>((set) => ({
     set({ profile: data })
   },
 }))
+
 
 
 

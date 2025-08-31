@@ -7,6 +7,12 @@ from .routers import auth, profile, actions, catalog
 from . import models  # ensure models are imported for metadata
 
 app = FastAPI(title="Mafia Game API")
+# DEBUG: print DSN on startup
+try:
+    from .settings import settings
+    print('>>> EFFECTIVE_DATABASE_URL:', getattr(settings, 'DATABASE_URL', getattr(settings, 'database_url', None)))
+except Exception as _e:
+    print('>>> DSN DEBUG FAILED:', _e)
 
 # CORS - single instance
 app.add_middleware(
@@ -30,3 +36,8 @@ async def on_startup():
 @app.get("/")
 async def health():
     return {"status": "ok"}
+
+
+
+
+

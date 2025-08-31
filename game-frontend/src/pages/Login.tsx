@@ -1,6 +1,6 @@
 ﻿import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api } from "../lib/http"
 import { useAuth } from '../state/auth'
 
 export default function Login() {
@@ -34,6 +34,7 @@ export default function Login() {
     </div>
   )
 }
+
 
 
 
