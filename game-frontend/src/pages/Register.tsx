@@ -3,7 +3,7 @@
 // import { postRegister } from './shared/api';
 // import { FormEvent, useState } from 'react'
 // import { useNavigate } from 'react-router-dom'
-// import { api } from '../lib/api'
+// import { api } from "../lib/http"
 // import { useAuth } from '../state/auth'
 // 
 // export default function Register() {
@@ -50,7 +50,7 @@
 
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api } from "../lib/http"
 import { useAuth } from '../state/auth'
 
 export default function Register() {
@@ -89,6 +89,7 @@ export default function Register() {
     </div>
   )
 }
+
 
 
 

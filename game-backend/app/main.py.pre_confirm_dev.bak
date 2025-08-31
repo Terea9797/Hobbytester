@@ -7,7 +7,7 @@ from .routers import auth, profile, actions, catalog, confirm_dev
 from . import models  # ensure models are imported for metadata
 
 app = FastAPI(title="Mafia Game API")
-app.include_router(confirm_dev.router)
+app.include_router(confirm_dev.router)\n
 # DEBUG: print DSN on startup
 try:
     from .settings import settings
@@ -41,6 +41,3 @@ async def health():
 
 
 from .routers import confirm_dev
-app.include_router(confirm_dev.router)
-
-

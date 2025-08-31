@@ -1,0 +1,81 @@
+﻿import { useEffect, useState } from "react";
+import { useSearchParams, Link } from "react-router-dom";
+import { api } from "../lib/http";
+
+type State =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "ok"; message: string }
+  | { kind: "error"; message: string };
+
+export default function ConfirmEmail() {
+  const [params] = useSearchParams();
+  const [state, setState] = useState<State>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      const token = params.get("token");
+      if (!token) {
+        setState({ kind: "error", message: "Missing token in URL." });
+        return;
+      }
+
+      try {
+        // Backend supports GET /auth/confirm-email?token=...
+        const q = encodeURIComponent(token);
+        await api(/auth/confirm-email?token=, { method: "GET" });
+        if (!cancelled) setState({ kind: "ok", message: "Your email is confirmed. You can now log in." });
+      } catch (err: any) {
+        const msg =
+          (err && typeof err.message === "string" && err.message) ||
+          "The confirmation link is invalid or expired.";
+        if (!cancelled) setState({ kind: "error", message: msg });
+      }
+    }
+
+    run();
+    return () => { cancelled = true; };
+  }, [params]);
+
+  return (
+    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-zinc-900 to-black text-white px-6">
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+        <h1 className="text-2xl font-bold mb-3">Email confirmation</h1>
+
+        {state.kind === "loading" && (
+          <div className="space-y-4">
+            <div className="h-3 w-40 bg-white/10 rounded animate-pulse" />
+            <p className="text-sm text-white/70">Confirming your email...</p>
+          </div>
+        )}
+
+        {state.kind === "ok" && (
+          <div className="space-y-4">
+            <div className="rounded-lg px-4 py-3 bg-emerald-600/20 ring-1 ring-emerald-500/30">
+              {state.message}
+            </div>
+            <Link
+              to="/"
+              className="inline-block rounded-lg bg-emerald-600/20 ring-1 ring-emerald-500/30 px-4 py-2 hover:bg-emerald-600/30"
+            >
+              Go to login
+            </Link>
+          </div>
+        )}
+
+        {state.kind === "error" && (
+          <div className="space-y-4">
+            <div className="rounded-lg px-4 py-3 bg-rose-600/20 ring-1 ring-rose-500/30">
+              {state.message}
+            </div>
+            <p className="text-sm text-white/70">
+              If you need a new link, try the “Forgot password” flow or re-register.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

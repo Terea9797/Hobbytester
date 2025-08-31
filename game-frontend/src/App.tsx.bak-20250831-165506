@@ -1,11 +1,11 @@
 ﻿import { Routes, Route } from "react-router-dom";
 import VerifyEmail from "./pages/VerifyEmail";
 import LandingPage from "./components/LandingPage";
-import ConfirmEmail from './pages/ConfirmEmail';
 
 export default function App() {
   return (
-    <Routes>
+    <AuthProvider>
+  <Routes>
       <Route
         path="/"
         element={
@@ -17,7 +17,10 @@ export default function App() {
         }
       />
       <Route path="/verify" element={<VerifyEmail />} />
-  <Route path="/confirm-email" element={<ConfirmEmail />} />
-    </Routes>
+    
+      <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
+      <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} /></Routes>
+</AuthProvider>
   );
 }
+

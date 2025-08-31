@@ -1,5 +1,5 @@
 ﻿import Layout from '../components/Layout'
-import { api } from '../lib/api'
+import { api } from "../lib/http"
 import { useAuth } from '../state/auth'
 
 async function act(type: 'extort' | 'deal' | 'lay_low', fetchProfile: () => Promise<void>) {
@@ -26,6 +26,7 @@ export default function Street() {
 
 
 import { api } from "../lib/http";
+
 
 
 

@@ -43,4 +43,3 @@ async def health():
 from .routers import confirm_dev
 app.include_router(confirm_dev.router)
 
-
