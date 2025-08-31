@@ -1,13 +1,18 @@
-﻿from .settings import settings
+﻿import os
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from .settings import settings
 
-def send_email(to: str, subject: str, text: str) -> None:
-    """
-    DEV ONLY: prints the email that would be sent.
-    Replace this with a real provider (SMTP/SendGrid/etc.) later.
-    """
-    banner = "=" * 30
-    print(f"\n{banner} EMAIL (DEV) {banner}")
-    print(f"To: {to}")
-    print(f"Subject: {subject}")
-    print(text)
-    print(f"{'=' * (len(banner) + 14)}\n")
+def send_email(to: str, subject: str, text: str):
+    message = Mail(
+        from_email="no-reply@yourdomain.com",
+        to_emails=to,
+        subject=subject,
+        plain_text_content=text
+    )
+    try:
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        sg.send(message)
+        print(f"✅ Email sent to {to}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")

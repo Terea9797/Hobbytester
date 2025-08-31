@@ -25,3 +25,20 @@ env/
 Thumbs.db
 .idea/
 .vscode/
+.coverage
+
+# Virtual env
+game-backend/.venv/
+
+# Node
+game-frontend/node_modules/
+game-frontend/dist/
+game-frontend/.vite/
+
+# Env & local DB
+game-backend/.env
+game-frontend/.env
+game-backend/app.db
+*.sqlite*
+
+# IDE/OS

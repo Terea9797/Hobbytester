@@ -13,7 +13,7 @@ from ..schemas import (
 )
 from ..database import Base
 from ..deps import get_db, get_current_user
-from ..emails import send_email
+from ..emails import send_confirm_email
 from ..models.user import User, EmailToken
 from ..security import hash_password, verify_password, create_access_token
 from ..settings import settings
@@ -64,11 +64,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     # Email confirmation token
     token = await _issue_email_token(db, user.id, "confirm", ttl_minutes=60*24)  # 24h
     confirm_link = f"{settings.BASE_URL}/auth/confirm-email?token={token}"
-    send_email(
-        to=email,
-        subject="Confirm your email",
-        text=f"Hello {username},\n\nClick to confirm your email:\n{confirm_link}\n\nIf you didn't register, ignore this."
-    )
+    send_confirm_email(to_email=user.email, username=user.username, token=token)
 
     return PublicUser(id=user.id, username=user.username, email=user.email, is_verified=user.is_verified)
 
@@ -114,11 +110,7 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     if user:
         token = await _issue_email_token(db, user.id, "reset", ttl_minutes=60)  # 1h
         reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-        send_email(
-            to=email,
-            subject="Reset your password",
-            text=f"Hello {user.username},\n\nReset your password using this link:\n{reset_link}\n\nThis link expires in 60 minutes."
-        )
+        send_confirm_email(to_email=user.email, username=user.username, token=token)
     return {"status": "ok"}
 
 @router.post("/reset-password")
@@ -149,3 +141,6 @@ async def me(current = Depends(get_current_user)):
         email=current.email,
         is_verified=current.is_verified,
     )
+
+
+
